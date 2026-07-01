@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import AppKit
+import ScreenCaptureKit
 
 /// Audio quality presets. Lower bitrate = smaller file. AAC-LC at 128 kbps is a
 /// good "small but not bad" default (~1 MB per minute, stereo).
@@ -46,9 +47,15 @@ final class RecorderModel: ObservableObject {
         didSet { UserDefaults.standard.set(folderURL.path, forKey: "folder") }
     }
 
+    /// Weak handle so the app delegate can finalize an in-progress recording at
+    /// quit time. Set once, on the main actor, from `init`.
+    nonisolated(unsafe) static private(set) weak var shared: RecorderModel?
+
     private let recorder = SystemAudioRecorder()
     private var timer: Timer?
     private var startDate: Date?
+    /// True while a start/stop is in flight — blocks re-entrant toggles.
+    private var isTransitioning = false
 
     init() {
         let defaults = UserDefaults.standard
@@ -63,9 +70,11 @@ final class RecorderModel: ObservableObject {
             folderURL = music.appendingPathComponent("RecordAudio", isDirectory: true)
         }
 
-        recorder.onError = { [weak self] message in
-            Task { @MainActor in self?.handleStreamError(message) }
+        recorder.onError = { [weak self] error in
+            Task { @MainActor in await self?.streamStoppedUnexpectedly(error) }
         }
+
+        Self.shared = self
     }
 
     var elapsedString: String {
@@ -76,10 +85,13 @@ final class RecorderModel: ObservableObject {
     // MARK: - Control
 
     func toggle() {
-        if isRecording {
-            Task { await stop() }
-        } else {
-            Task { await start() }
+        // Ignore repeat presses while a start/stop is still resolving, otherwise
+        // a double-click could kick off two overlapping captures.
+        guard !isTransitioning else { return }
+        isTransitioning = true
+        Task {
+            if isRecording { await stop() } else { await start() }
+            isTransitioning = false
         }
     }
 
@@ -103,7 +115,8 @@ final class RecorderModel: ObservableObject {
             elapsed = 0
             startTimer()
         } catch {
-            handleStreamError(error.localizedDescription)
+            isRecording = false          // recorder already rolled back its state
+            report(error)
         }
     }
 
@@ -116,21 +129,45 @@ final class RecorderModel: ObservableObject {
         }
     }
 
+    /// Finalize an in-progress recording before the app quits, so the file isn't
+    /// left half-written (unplayable).
+    func finishForQuit() async {
+        guard isRecording else { return }
+        stopTimer()
+        let url = await recorder.stop()
+        isRecording = false
+        if let url, FileManager.default.fileExists(atPath: url.path) {
+            lastFileURL = url
+        }
+    }
+
     // MARK: - Errors / permission
 
-    private func handleStreamError(_ message: String) {
+    /// The capture stream died on its own (e.g. permission revoked mid-recording,
+    /// display disconnected). Salvage whatever was written, then surface the error.
+    private func streamStoppedUnexpectedly(_ error: Error) async {
+        guard isRecording else { return }   // ignore stray callbacks after a clean stop
         stopTimer()
+        let url = await recorder.stop()
         isRecording = false
+        if let url, FileManager.default.fileExists(atPath: url.path) {
+            lastFileURL = url
+        }
+        report(error)
+    }
 
-        // ScreenCaptureKit reports a "declined" / "not authorized" style error
-        // when Screen Recording permission is missing.
-        let lower = message.lowercased()
-        if lower.contains("declined") || lower.contains("permission")
-            || lower.contains("authorized") || lower.contains("-3801") {
+    private func report(_ error: Error) {
+        // Detect the missing-Screen-Recording-permission case by error *code*
+        // (locale-independent) rather than matching English error text.
+        let ns = error as NSError
+        let declined = (ns.domain == SCStreamError.errorDomain
+                        && ns.code == SCStreamError.Code.userDeclined.rawValue)
+                    || ns.code == -3801
+        if declined {
             permissionNeeded = true
             statusMessage = "Screen Recording permission is required to capture system audio."
         } else {
-            statusMessage = message
+            statusMessage = error.localizedDescription
         }
     }
 
@@ -179,6 +216,7 @@ final class RecorderModel: ObservableObject {
 
     private func makeFileName() -> String {
         let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")   // stable filenames in any locale
         f.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
         return "System Audio \(f.string(from: Date())).m4a"
     }

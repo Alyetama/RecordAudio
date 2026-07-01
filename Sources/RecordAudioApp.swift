@@ -11,6 +11,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
+
+    // If a recording is in progress, finalize the file before quitting so it
+    // isn't left half-written and unplayable.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard RecorderModel.shared?.isRecording == true else { return .terminateNow }
+        Task { @MainActor in
+            await RecorderModel.shared?.finishForQuit()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
 }
 
 @main

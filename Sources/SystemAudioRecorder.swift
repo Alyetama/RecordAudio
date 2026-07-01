@@ -9,6 +9,11 @@ import CoreMedia
 ///
 /// macOS gates system-audio capture behind the **Screen Recording** privacy
 /// permission, so the first recording will trigger that prompt.
+///
+/// Thread-safety: every access to the mutable capture state below happens on
+/// `sampleQueue`. That queue is both the ScreenCaptureKit sample-delivery queue
+/// and the lock that serializes `start()`/`stop()`, so there is no data race
+/// between an in-flight sample buffer and teardown.
 final class SystemAudioRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
 
     private var stream: SCStream?
@@ -20,8 +25,8 @@ final class SystemAudioRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
     private let sampleQueue = DispatchQueue(label: "com.fcatus.recordaudio.samples")
 
     /// Called (on an arbitrary queue) if the capture stops unexpectedly, e.g.
-    /// the user revoked Screen Recording permission.
-    var onError: ((String) -> Void)?
+    /// the user revoked Screen Recording permission mid-recording.
+    var onError: ((Error) -> Void)?
 
     // MARK: - Start
 
@@ -65,45 +70,62 @@ final class SystemAudioRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
         guard writer.canAdd(input) else { throw RecorderError.cannotAddInput }
         writer.add(input)
 
-        self.writer = writer
-        self.audioInput = input
-        self.outputURL = url
-        self.sessionStarted = false
-
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
         try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: sampleQueue)
-        self.stream = stream
-        try await stream.startCapture()
+
+        // Publish state to the sample queue before capture can deliver anything.
+        sampleQueue.sync {
+            self.writer = writer
+            self.audioInput = input
+            self.outputURL = url
+            self.stream = stream
+            self.sessionStarted = false
+        }
+
+        do {
+            try await stream.startCapture()
+        } catch {
+            // Roll back the half-initialized state so the next attempt is clean.
+            _ = await stop()
+            throw error
+        }
     }
 
     // MARK: - Stop
 
-    /// Stops capture, finalizes the file, and returns the written URL.
+    /// Stops capture, finalizes the file, and returns the written URL (or nil if
+    /// nothing was captured). Safe to call more than once / concurrently: the
+    /// first call takes ownership of the state and any later call is a no-op.
     @discardableResult
     func stop() async -> URL? {
-        if let stream = stream {
-            try? await stream.stopCapture()
+        var writer: AVAssetWriter?
+        var input: AVAssetWriterInput?
+        var url: URL?
+        var stream: SCStream?
+        sampleQueue.sync {
+            writer = self.writer; input = self.audioInput
+            url = self.outputURL; stream = self.stream
+            self.writer = nil; self.audioInput = nil
+            self.outputURL = nil; self.stream = nil
+            self.sessionStarted = false
         }
-        stream = nil
 
-        // No more sample buffers will arrive after stopCapture() returns.
-        audioInput?.markAsFinished()
+        guard writer != nil || stream != nil else { return nil }
 
-        let finished = outputURL
-        if let writer = writer, writer.status == .writing {
+        if let stream { try? await stream.stopCapture() }   // no more callbacks after this
+
+        // Only finalize if we actually began writing; otherwise no file exists.
+        if let writer, writer.status == .writing {
+            input?.markAsFinished()
             await withCheckedContinuation { cont in
                 writer.finishWriting { cont.resume() }
             }
+            return url
         }
-
-        writer = nil
-        audioInput = nil
-        outputURL = nil
-        sessionStarted = false
-        return finished
+        return nil
     }
 
-    // MARK: - SCStreamOutput
+    // MARK: - SCStreamOutput  (invoked on sampleQueue)
 
     func stream(_ stream: SCStream,
                 didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
@@ -131,7 +153,7 @@ final class SystemAudioRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
     // MARK: - SCStreamDelegate
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        onError?(error.localizedDescription)
+        onError?(error)
     }
 }
 
