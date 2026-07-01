@@ -34,8 +34,8 @@ struct MainView: View {
             bottomBar
         }
         .padding(20)
-        .frame(minWidth: 360, minHeight: 440)
-        .onAppear { model.applyActivationPolicy() }
+        .frame(minWidth: 360, maxWidth: .infinity, minHeight: 440, maxHeight: .infinity)
+        .onAppear { Appearance.applyDockPolicyFromDefaults() }
     }
 
     private var header: some View {

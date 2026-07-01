@@ -45,19 +45,6 @@ final class RecorderModel: ObservableObject {
     @Published var folderURL: URL {
         didSet { UserDefaults.standard.set(folderURL.path, forKey: "folder") }
     }
-    @Published var showMenuBarIcon: Bool {
-        didSet {
-            UserDefaults.standard.set(showMenuBarIcon, forKey: "showMenuBarIcon")
-            if !showMenuBarIcon && !showDockIcon { showDockIcon = true }  // stay reachable
-        }
-    }
-    @Published var showDockIcon: Bool {
-        didSet {
-            UserDefaults.standard.set(showDockIcon, forKey: "showDockIcon")
-            applyActivationPolicy()
-            if !showDockIcon && !showMenuBarIcon { showMenuBarIcon = true }  // stay reachable
-        }
-    }
 
     private let recorder = SystemAudioRecorder()
     private var timer: Timer?
@@ -67,9 +54,6 @@ final class RecorderModel: ObservableObject {
         let defaults = UserDefaults.standard
         let savedBitrate = defaults.integer(forKey: "bitrate")
         quality = Quality(rawValue: savedBitrate) ?? .balanced
-
-        showMenuBarIcon = (defaults.object(forKey: "showMenuBarIcon") as? Bool) ?? true
-        showDockIcon = (defaults.object(forKey: "showDockIcon") as? Bool) ?? true
 
         if let saved = defaults.string(forKey: "folder") {
             folderURL = URL(fileURLWithPath: saved)
@@ -151,11 +135,6 @@ final class RecorderModel: ObservableObject {
     }
 
     // MARK: - Presentation
-
-    /// Show or hide the Dock icon (regular vs. accessory app).
-    func applyActivationPolicy() {
-        NSApp?.setActivationPolicy(showDockIcon ? .regular : .accessory)
-    }
 
     /// Open the standard Settings window (works across macOS 13–26).
     func openAppSettings() {

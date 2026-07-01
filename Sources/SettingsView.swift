@@ -4,6 +4,8 @@ import SwiftUI
 /// app presents itself (menu bar and/or Dock).
 struct SettingsView: View {
     @ObservedObject var model: RecorderModel
+    @AppStorage(Appearance.showMenuBarKey) private var showMenuBarIcon = true
+    @AppStorage(Appearance.showDockKey) private var showDockIcon = true
 
     var body: some View {
         Form {
@@ -31,8 +33,19 @@ struct SettingsView: View {
             }
 
             Section("Appearance") {
-                Toggle("Show menu bar icon", isOn: $model.showMenuBarIcon)
-                Toggle("Show Dock icon", isOn: $model.showDockIcon)
+                Toggle("Show menu bar icon", isOn: Binding(
+                    get: { showMenuBarIcon },
+                    set: { on in
+                        showMenuBarIcon = on
+                        if !on && !showDockIcon { showDockIcon = true }  // stay reachable
+                    }))
+                Toggle("Show Dock icon", isOn: Binding(
+                    get: { showDockIcon },
+                    set: { on in
+                        showDockIcon = on
+                        if !on && !showMenuBarIcon { showMenuBarIcon = true }  // stay reachable
+                        Appearance.applyDockPolicy(showDockIcon)
+                    }))
                 Text("Turn off the Dock icon to run as a menu-bar-only app. At least one of these stays on so the app remains reachable.")
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
