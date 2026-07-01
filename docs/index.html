@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RecordAudio — record your Mac's system audio</title>
+<meta name="description" content="Record your Mac's system audio — not the mic — to small, good-quality AAC files.">
+<style>
+  :root{
+    --violet:#7D33F5; --magenta:#CC29B8; --coral:#FF3B6B;
+    --ink:#0f0d17; --card:rgba(255,255,255,.06); --line:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; min-height:100vh; color:#fff;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 700px at 20% -10%, rgba(125,51,245,.55), transparent 60%),
+      radial-gradient(1000px 700px at 90% 10%, rgba(255,59,107,.45), transparent 55%),
+      linear-gradient(160deg,#1a1030,#0c0a16 70%);
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:64px 24px 96px; text-align:center}
+  .logo{
+    width:84px;height:84px;border-radius:22px;margin:0 auto 20px;
+    background:linear-gradient(150deg,var(--violet),var(--coral));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 12px 40px rgba(204,41,184,.4);
+  }
+  .logo svg{width:44px;height:44px;fill:#fff}
+  h1{font-size:44px;margin:.2em 0 .1em;letter-spacing:-.02em}
+  .tagline{font-size:19px;opacity:.82;margin:0 auto 34px;max-width:34ch;line-height:1.5}
+  .shot{
+    width:100%;max-width:760px;border-radius:16px;margin:8px auto 36px;display:block;
+    filter:drop-shadow(0 30px 60px rgba(0,0,0,.5));
+  }
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    background:#fff;color:#141018;text-decoration:none;font-weight:700;font-size:18px;
+    padding:16px 30px;border-radius:14px;transition:transform .12s ease, box-shadow .12s ease;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(0,0,0,.45)}
+  .meta{margin-top:16px;opacity:.66;font-size:14px}
+  .how{
+    margin-top:72px;text-align:left;background:var(--card);border:1px solid var(--line);
+    border-radius:18px;padding:28px 30px;scroll-margin-top:24px;transition:box-shadow .3s ease;
+  }
+  .how.flash{box-shadow:0 0 0 3px var(--coral)}
+  .how h2{margin:.1em 0 .2em;font-size:23px}
+  .how p.sub{opacity:.72;margin:.2em 0 1.2em}
+  ol{margin:0;padding-left:22px;line-height:1.65}
+  li{margin:.5em 0}
+  code{background:rgba(255,255,255,.1);padding:2px 7px;border-radius:6px;font-size:14px}
+  .note{margin-top:20px;padding:14px 16px;border-radius:12px;
+    background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.28);font-size:14.5px;line-height:1.55}
+  footer{margin-top:48px;opacity:.5;font-size:13px}
+  a.link{color:#ffd1e0}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 100 100"><g>
+        <rect x="14" y="42" width="7" height="16" rx="3.5"/>
+        <rect x="27" y="34" width="7" height="32" rx="3.5"/>
+        <rect x="40" y="24" width="7" height="52" rx="3.5"/>
+        <rect x="53" y="18" width="7" height="64" rx="3.5"/>
+        <rect x="66" y="30" width="7" height="40" rx="3.5"/>
+        <rect x="79" y="40" width="7" height="20" rx="3.5"/>
+      </g></svg>
+    </div>
+
+    <h1>RecordAudio</h1>
+    <p class="tagline">Record your Mac's system audio — not the mic — to small, good-quality AAC files.</p>
+
+    <img class="shot" src="mockup.png" alt="RecordAudio app window">
+
+    <div>
+      <a class="btn" id="download"
+         href="https://github.com/Alyetama/RecordAudio/releases/latest/download/RecordAudio.dmg">
+        ⬇︎ Download for macOS
+      </a>
+      <div class="meta">Free · MIT-licensed · macOS 13+ · Apple Silicon</div>
+    </div>
+
+    <section class="how" id="how-to-open">
+      <h2>How to open the app</h2>
+      <p class="sub">RecordAudio isn't signed with an Apple Developer ID, so macOS blocks it the first time. Any one of these works — you only need to do it once.</p>
+      <ol>
+        <li><b>Right-click to open</b> — in Finder, Control-click (right-click) <b>RecordAudio.app</b> → <b>Open</b>, then <b>Open</b> again in the dialog.</li>
+        <li><b>Privacy &amp; Security</b> — if it's still blocked on newer macOS, open <b>System Settings → Privacy &amp; Security</b>, scroll down, and click <b>Open Anyway</b> next to the RecordAudio message, then confirm with <b>Open</b>.</li>
+        <li><b>Terminal</b> — or clear the quarantine flag:<br>
+          <code>xattr -dr com.apple.quarantine /Applications/RecordAudio.app</code></li>
+      </ol>
+      <div class="note">On your first <b>Record</b>, macOS also asks for <b>Screen Recording</b> permission — that's the only channel macOS provides for capturing system audio. Enable RecordAudio under <b>System Settings → Privacy &amp; Security → Screen Recording</b>.</div>
+    </section>
+
+    <footer>
+      <a class="link" href="https://github.com/Alyetama/RecordAudio">View source on GitHub</a> · MIT © 2026 Alyetama
+    </footer>
+  </div>
+
+  <script>
+    // Clicking Download reveals the "How to open the app" section immediately.
+    document.getElementById('download').addEventListener('click', function () {
+      var how = document.getElementById('how-to-open');
+      how.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      how.classList.add('flash');
+      setTimeout(function () { how.classList.remove('flash'); }, 1600);
+    });
+  </script>
+</body>
+</html>

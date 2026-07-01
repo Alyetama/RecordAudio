@@ -1,0 +1,14 @@
+# Release artifacts — these ship as GitHub release assets only, never committed
+*.dmg
+*.app
+build/
+dist/
+DerivedData/
+
+# macOS / Xcode cruft
+*.xcuserstate
+.DS_Store
+
+# Icon working files
+Icon/*.iconset/
+Icon/icon_1024.png
