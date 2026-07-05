@@ -33,7 +33,8 @@ final class SystemAudioRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
     /// - Parameters:
     ///   - url: destination `.m4a` file (must not already exist).
     ///   - bitrate: AAC bitrate in bits/sec (e.g. 128_000).
-    func start(to url: URL, bitrate: Int) async throws {
+    ///   - source: capture all system audio, or only one application's audio.
+    func start(to url: URL, bitrate: Int, source: AudioSource) async throws {
         // Pick a display to attach the capture to. Audio capture still needs a
         // content filter, but since we never register a video output no frames
         // are ever delivered to us — this is effectively audio-only.
@@ -42,9 +43,25 @@ final class SystemAudioRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
         guard let display = content.displays.first else {
             throw RecorderError.noDisplay
         }
-        let filter = SCContentFilter(display: display,
+
+        let filter: SCContentFilter
+        switch source {
+        case .system:
+            // Everything on the display → the whole system-audio mix.
+            filter = SCContentFilter(display: display,
                                      excludingApplications: [],
                                      exceptingWindows: [])
+        case .app(let bundleID):
+            // Only the chosen app's content → only that app's audio.
+            guard let app = content.applications.first(where: {
+                $0.bundleIdentifier == bundleID
+            }) else {
+                throw RecorderError.appNotRunning
+            }
+            filter = SCContentFilter(display: display,
+                                     including: [app],
+                                     exceptingWindows: [])
+        }
 
         let config = SCStreamConfiguration()
         config.capturesAudio = true
@@ -160,11 +177,13 @@ final class SystemAudioRecorder: NSObject, SCStreamDelegate, SCStreamOutput {
 enum RecorderError: LocalizedError {
     case noDisplay
     case cannotAddInput
+    case appNotRunning
 
     var errorDescription: String? {
         switch self {
         case .noDisplay:     return "No display was available to attach the audio capture to."
         case .cannotAddInput: return "Could not set up the AAC audio encoder."
+        case .appNotRunning:  return "The selected app isn't running. Pick another source or choose “All system audio.”"
         }
     }
 }

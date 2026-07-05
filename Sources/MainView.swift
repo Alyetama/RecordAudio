@@ -13,6 +13,7 @@ struct MainView: View {
     var body: some View {
         VStack(spacing: 16) {
             header
+            SourcePicker(model: model)
             RecordButton(model: model, large: true)
 
             if model.isRecording {

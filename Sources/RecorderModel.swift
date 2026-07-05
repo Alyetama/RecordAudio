@@ -47,6 +47,25 @@ final class RecorderModel: ObservableObject {
         didSet { UserDefaults.standard.set(folderURL.path, forKey: "folder") }
     }
 
+    /// Which audio to capture — all system audio, or one specific app.
+    @Published var source: AudioSource {
+        didSet {
+            switch source {
+            case .system:
+                UserDefaults.standard.removeObject(forKey: "sourceBundleID")
+            case .app(let bid):
+                UserDefaults.standard.set(bid, forKey: "sourceBundleID")
+            }
+        }
+    }
+    /// Last-known display name for the selected app (so the picker can label it
+    /// even when the app isn't currently running).
+    @Published var sourceName: String? {
+        didSet { UserDefaults.standard.set(sourceName, forKey: "sourceName") }
+    }
+    /// Running apps that own on-screen windows — candidates for a per-app source.
+    @Published var availableApps: [AudioApp] = []
+
     /// Weak handle so the app delegate can finalize an in-progress recording at
     /// quit time. Set once, on the main actor, from `init`.
     nonisolated(unsafe) static private(set) weak var shared: RecorderModel?
@@ -68,6 +87,14 @@ final class RecorderModel: ObservableObject {
             let music = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first
                 ?? FileManager.default.homeDirectoryForCurrentUser
             folderURL = music.appendingPathComponent("RecordAudio", isDirectory: true)
+        }
+
+        if let bid = defaults.string(forKey: "sourceBundleID"), !bid.isEmpty {
+            source = .app(bundleID: bid)
+            sourceName = defaults.string(forKey: "sourceName")
+        } else {
+            source = .system
+            sourceName = nil
         }
 
         recorder.onError = { [weak self] error in
@@ -109,7 +136,7 @@ final class RecorderModel: ObservableObject {
 
         let url = folderURL.appendingPathComponent(makeFileName())
         do {
-            try await recorder.start(to: url, bitrate: quality.bitrate)
+            try await recorder.start(to: url, bitrate: quality.bitrate, source: source)
             isRecording = true
             startDate = Date()
             elapsed = 0
@@ -138,6 +165,47 @@ final class RecorderModel: ObservableObject {
         isRecording = false
         if let url, FileManager.default.fileExists(atPath: url.path) {
             lastFileURL = url
+        }
+    }
+
+    // MARK: - Audio source
+
+    /// Set the capture source, remembering the app's display name for the picker.
+    func selectSource(_ newValue: AudioSource) {
+        source = newValue
+        switch newValue {
+        case .system:
+            sourceName = nil
+        case .app(let bid):
+            sourceName = availableApps.first(where: { $0.bundleID == bid })?.name ?? sourceName
+        }
+    }
+
+    /// Refresh the list of pickable apps (those with on-screen windows). Requires
+    /// Screen Recording permission — before it's granted this quietly stays empty.
+    func refreshApps() async {
+        guard let content = try? await SCShareableContent.excludingDesktopWindows(
+            false, onScreenWindowsOnly: true) else { return }
+
+        let myBundleID = Bundle.main.bundleIdentifier
+        var seen = Set<String>()
+        var apps: [AudioApp] = []
+        for window in content.windows {
+            guard window.isOnScreen, let owner = window.owningApplication else { continue }
+            let bid = owner.bundleIdentifier
+            if bid.isEmpty || bid == myBundleID || seen.contains(bid) { continue }
+            seen.insert(bid)
+            let name = owner.applicationName.isEmpty ? bid : owner.applicationName
+            apps.append(AudioApp(bundleID: bid, name: name))
+        }
+        availableApps = apps.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+
+        // Keep the remembered name current if the selected app is running.
+        if case .app(let bid) = source,
+           let match = availableApps.first(where: { $0.bundleID == bid }) {
+            sourceName = match.name
         }
     }
 

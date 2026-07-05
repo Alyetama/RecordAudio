@@ -14,6 +14,7 @@ struct MenuView: View {
                 Text("System Audio Recorder").font(.headline)
             }
 
+            SourcePicker(model: model)
             RecordButton(model: model)
 
             if let last = model.lastFileURL, !model.isRecording {
