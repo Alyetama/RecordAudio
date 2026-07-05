@@ -91,7 +91,7 @@
         <li><b>Right-click to open</b> — in Finder, Control-click (right-click) <b>RecordAudio.app</b> → <b>Open</b>, then <b>Open</b> again in the dialog.</li>
         <li><b>Privacy &amp; Security</b> — if it's still blocked on newer macOS, open <b>System Settings → Privacy &amp; Security</b>, scroll down, and click <b>Open Anyway</b> next to the RecordAudio message, then confirm with <b>Open</b>.</li>
         <li><b>Terminal</b> — or clear the quarantine flag:<br>
-          <code>xattr -dr com.apple.quarantine /Applications/RecordAudio.app</code></li>
+          <code>/usr/bin/xattr -dr com.apple.quarantine /Applications/RecordAudio.app</code></li>
       </ol>
       <div class="note">On your first <b>Record</b>, macOS also asks for <b>Screen Recording</b> permission — that's the only channel macOS provides for capturing system audio. Enable RecordAudio under <b>System Settings → Privacy &amp; Security → Screen Recording</b>.</div>
     </section>

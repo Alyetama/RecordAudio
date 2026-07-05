@@ -35,7 +35,7 @@ time. Any **one** of these works — you only need to do it once:
    **Open Anyway** next to the RecordAudio message, then confirm with **Open**.
 3. **Terminal** — or clear the quarantine flag:
    ```bash
-   xattr -dr com.apple.quarantine /Applications/RecordAudio.app
+   /usr/bin/xattr -dr com.apple.quarantine /Applications/RecordAudio.app
    ```
 
 > On your first **Record**, macOS also asks for **Screen Recording** permission —
