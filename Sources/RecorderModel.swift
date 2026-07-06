@@ -242,10 +242,30 @@ final class RecorderModel: ObservableObject {
     // MARK: - Presentation
 
     /// Open the standard Settings window (works across macOS 13–26).
+    ///
+    /// Sending `showSettingsWindow:`/`showPreferencesWindow:` with a nil target
+    /// walks the responder chain, which doesn't reliably reach the private
+    /// object SwiftUI wires the Settings scene's action to — from a plain
+    /// button that silently does nothing. The app's own "Settings…" menu item
+    /// *does* work, so reuse its exact target/action instead of guessing.
     func openAppSettings() {
         NSApp.activate(ignoringOtherApps: true)
+
+        if let item = settingsMenuItem(), let action = item.action {
+            NSApp.sendAction(action, to: item.target, from: item)
+            return
+        }
+        // Fallback for the rare case the menu item can't be found.
         if !NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) {
             NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        }
+    }
+
+    private func settingsMenuItem() -> NSMenuItem? {
+        guard let appMenu = NSApp.mainMenu?.items.first?.submenu else { return nil }
+        return appMenu.items.first {
+            $0.title.localizedCaseInsensitiveContains("Settings")
+            || $0.title.localizedCaseInsensitiveContains("Preferences")
         }
     }
 
