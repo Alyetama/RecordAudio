@@ -181,21 +181,36 @@ final class RecorderModel: ObservableObject {
         }
     }
 
-    /// Refresh the list of pickable apps (those with on-screen windows). Requires
-    /// Screen Recording permission — before it's granted this quietly stays empty.
+    /// Refresh the list of pickable apps. Requires Screen Recording permission —
+    /// before it's granted this quietly stays empty.
+    ///
+    /// Built from `content.applications` — the exact same source `start()` uses
+    /// to resolve a chosen app — rather than deriving from on-screen window
+    /// geometry. Deriving from windows missed apps like Vesktop whose window
+    /// wasn't flagged "on screen" (minimized, on another Space, background tray
+    /// mode, …) even though ScreenCaptureKit can still capture their audio.
     func refreshApps() async {
         guard let content = try? await SCShareableContent.excludingDesktopWindows(
-            false, onScreenWindowsOnly: true) else { return }
+            false, onScreenWindowsOnly: false) else { return }
+
+        // Only list "real" apps a user would recognize as running — i.e. those
+        // with a regular Dock presence — to filter out background helpers/agents
+        // that ScreenCaptureKit otherwise reports.
+        let regularBundleIDs = Set(
+            NSWorkspace.shared.runningApplications
+                .filter { $0.activationPolicy == .regular }
+                .compactMap(\.bundleIdentifier)
+        )
 
         let myBundleID = Bundle.main.bundleIdentifier
         var seen = Set<String>()
         var apps: [AudioApp] = []
-        for window in content.windows {
-            guard window.isOnScreen, let owner = window.owningApplication else { continue }
-            let bid = owner.bundleIdentifier
-            if bid.isEmpty || bid == myBundleID || seen.contains(bid) { continue }
+        for app in content.applications {
+            let bid = app.bundleIdentifier
+            guard !bid.isEmpty, bid != myBundleID, regularBundleIDs.contains(bid),
+                  !seen.contains(bid) else { continue }
             seen.insert(bid)
-            let name = owner.applicationName.isEmpty ? bid : owner.applicationName
+            let name = app.applicationName.isEmpty ? bid : app.applicationName
             apps.append(AudioApp(bundleID: bid, name: name))
         }
         availableApps = apps.sorted {
