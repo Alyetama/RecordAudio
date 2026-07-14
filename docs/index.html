@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RecordAudio — record your Mac's system audio</title>
-<meta name="description" content="Record your Mac's system audio — not the mic — to small, good-quality AAC files.">
+<meta name="description" content="Record whatever your Mac is playing, not the mic, to small AAC files that still sound good.">
 <style>
   :root{
     --violet:#7D33F5; --magenta:#CC29B8; --coral:#FF3B6B;
@@ -79,7 +79,7 @@
     </div>
 
     <h1>RecordAudio</h1>
-    <p class="tagline">Record your Mac's system audio — not the mic — to small, good-quality AAC files.</p>
+    <p class="tagline">Record whatever your Mac is playing, not the mic, to small AAC files that still sound good.</p>
 
     <img class="shot" src="mockup.png" alt="RecordAudio app window">
 
@@ -87,7 +87,7 @@
       <div class="btn-row">
         <a class="btn btn-primary" id="download"
            href="https://github.com/Alyetama/RecordAudio/releases/latest/download/RecordAudio.dmg">
-          ⬇︎ Download for macOS
+          Download for macOS
         </a>
         <a class="btn btn-secondary" href="https://github.com/Alyetama/RecordAudio">
           <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -108,14 +108,14 @@
 
     <section class="how" id="how-to-open">
       <h2>How to open the app</h2>
-      <p class="sub">RecordAudio isn't signed with an Apple Developer ID, so macOS blocks it the first time. Any one of these works — you only need to do it once.</p>
+      <p class="sub">RecordAudio isn't signed with an Apple Developer ID, so macOS blocks it the first time. Any one of these gets you in, and you only have to do it once.</p>
       <ol>
-        <li><b>Right-click to open</b> — in Finder, Control-click (right-click) <b>RecordAudio.app</b> → <b>Open</b>, then <b>Open</b> again in the dialog.</li>
-        <li><b>Privacy &amp; Security</b> — if it's still blocked on newer macOS, open <b>System Settings → Privacy &amp; Security</b>, scroll down, and click <b>Open Anyway</b> next to the RecordAudio message, then confirm with <b>Open</b>.</li>
-        <li><b>Terminal</b> — or clear the quarantine flag:<br>
+        <li><b>Right-click to open.</b> In Finder, Control-click (right-click) <b>RecordAudio.app</b>, choose <b>Open</b>, then <b>Open</b> again in the dialog.</li>
+        <li><b>Privacy &amp; Security.</b> If newer macOS still blocks it, open <b>System Settings → Privacy &amp; Security</b>, scroll down, and click <b>Open Anyway</b> next to the RecordAudio message, then confirm with <b>Open</b>.</li>
+        <li><b>Terminal.</b> Or clear the quarantine flag yourself:<br>
           <code>/usr/bin/xattr -dr com.apple.quarantine /Applications/RecordAudio.app</code></li>
       </ol>
-      <div class="note">On your first <b>Record</b>, macOS also asks for <b>Screen Recording</b> permission — that's the only channel macOS provides for capturing system audio. Enable RecordAudio under <b>System Settings → Privacy &amp; Security → Screen Recording</b>.</div>
+      <div class="note">The first time you hit <b>Record</b>, macOS also asks for <b>Screen Recording</b> permission. That's the only way it lets an app capture system audio, so turn RecordAudio on under <b>System Settings → Privacy &amp; Security → Screen Recording</b>.</div>
     </section>
 
     <footer>

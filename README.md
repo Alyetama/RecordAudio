@@ -1,34 +1,35 @@
 <h1 align="center">RecordAudio</h1>
 
-<p align="center">Record your Mac's <b>system audio</b> — not the mic — to small, good-quality AAC files, as a window or menu-bar app.</p>
+<p align="center">Record whatever your Mac is playing (not the microphone) to small, good-quality AAC files. Runs as a window, from the menu bar, or both.</p>
 
 <p align="center">
   <img src="docs/mockup.png" alt="RecordAudio" width="720">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Alyetama/RecordAudio/releases/latest/download/RecordAudio.dmg">
-    <b>⬇︎ Download for macOS</b>
-  </a>
+  <a href="https://github.com/Alyetama/RecordAudio/releases/latest/download/RecordAudio.dmg"><b>Download for macOS</b></a>
   &nbsp;·&nbsp; macOS 13+ &nbsp;·&nbsp; Apple Silicon
 </p>
 
 ---
 
-## Features
+## What it does
 
-- 🎧 **Records system audio, not the microphone** — captures whatever your Mac is playing (browser, music, apps).
-- 🪶 **Small files, good quality** — AAC in `.m4a` (Small / Balanced / High presets; ~1 MB per minute).
-- 🖥️ **Window or menu bar** — runs as a normal app window *and* an optional menu-bar icon; toggle either in Settings.
-- ⚙️ **Simple settings** — pick quality, save folder, and how the app appears.
-- ✂️ **Trim editor** — after recording, click **Trim…** to open a waveform editor; drag the start/end handles (or sliders), click anywhere to scrub, preview with **Play**, and **Save Trimmed** (passthrough — no quality loss).
-- 📝 **Transcribe** — click **Transcribe** to turn a recording into text on-device with Whisper (tiny), saved as a sidecar `.txt`. Requires `whisper-cli` (`brew install whisper-cpp`); the tiny model (~75 MB) downloads on first use.
-- 🔒 **No extra drivers** — uses Apple's ScreenCaptureKit; no BlackHole/Soundflower needed.
+It records the sound coming out of your Mac (a browser tab, a music app, a call) instead of the mic. Files are AAC in an `.m4a`, so they stay small: about 1 MB a minute on the Balanced preset, less on Small, more on High.
+
+A few things it can do beyond just recording:
+
+- Capture one specific app instead of the whole system mix.
+- Live in a normal window, the menu bar, or both, and hide its Dock icon if you want it out of the way.
+- Trim a recording afterward in a small waveform editor. Drag the ends, click anywhere to scrub, play it back, then save. The trim copies the audio as-is, so there's no re-encode and no quality loss.
+- Transcribe a recording to a text file that lands next to it. This one runs Whisper (the tiny model) on your machine, so it needs `whisper-cli` installed (`brew install whisper-cpp`); the model itself, about 75 MB, downloads the first time you use it.
+
+No BlackHole, no Soundflower, no virtual devices. It uses Apple's ScreenCaptureKit, which is also why macOS asks for Screen Recording permission the first time (more on that below).
 
 ## First launch (opening an unsigned app)
 
 RecordAudio isn't signed with an Apple Developer ID, so macOS blocks it the first
-time. Any **one** of these works — you only need to do it once:
+time. Any one of these gets you in, and you only have to do it once:
 
 1. **Right-click to open** — in Finder, Control-click (right-click)
    **RecordAudio.app** → **Open**, then **Open** again in the dialog.
@@ -40,9 +41,9 @@ time. Any **one** of these works — you only need to do it once:
    /usr/bin/xattr -dr com.apple.quarantine /Applications/RecordAudio.app
    ```
 
-> On your first **Record**, macOS also asks for **Screen Recording** permission —
-> that's the only channel macOS provides for capturing system audio. Enable
-> RecordAudio under *System Settings → Privacy & Security → Screen Recording*.
+> The first time you hit **Record**, macOS also asks for **Screen Recording**
+> permission. That's the only way macOS lets an app capture system audio, so
+> turn RecordAudio on under *System Settings → Privacy & Security → Screen Recording*.
 
 ## Build from source
 
