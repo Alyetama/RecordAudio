@@ -21,6 +21,8 @@
 - 🪶 **Small files, good quality** — AAC in `.m4a` (Small / Balanced / High presets; ~1 MB per minute).
 - 🖥️ **Window or menu bar** — runs as a normal app window *and* an optional menu-bar icon; toggle either in Settings.
 - ⚙️ **Simple settings** — pick quality, save folder, and how the app appears.
+- ✂️ **Trim editor** — after recording, click **Trim…** to open a waveform editor; drag the start/end handles (or sliders), click anywhere to scrub, preview with **Play**, and **Save Trimmed** (passthrough — no quality loss).
+- 📝 **Transcribe** — click **Transcribe** to turn a recording into text on-device with Whisper (tiny), saved as a sidecar `.txt`. Requires `whisper-cli` (`brew install whisper-cpp`); the tiny model (~75 MB) downloads on first use.
 - 🔒 **No extra drivers** — uses Apple's ScreenCaptureKit; no BlackHole/Soundflower needed.
 
 ## First launch (opening an unsigned app)

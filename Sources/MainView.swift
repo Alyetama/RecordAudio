@@ -62,6 +62,8 @@ struct MainView: View {
             Text(url.lastPathComponent)
                 .font(.caption).lineLimit(1).truncationMode(.middle)
             Spacer()
+            Button("Trim…") { model.trimLastRecording() }.controlSize(.small)
+            Button("Transcribe") { model.transcribeLastRecording() }.controlSize(.small)
             Button("Show") { model.revealLastFile() }.controlSize(.small)
         }
         .padding(8)

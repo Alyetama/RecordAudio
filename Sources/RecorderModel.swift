@@ -151,9 +151,7 @@ final class RecorderModel: ObservableObject {
         stopTimer()
         let url = await recorder.stop()
         isRecording = false
-        if let url, FileManager.default.fileExists(atPath: url.path) {
-            lastFileURL = url
-        }
+        setLastFile(url)
     }
 
     /// Finalize an in-progress recording before the app quits, so the file isn't
@@ -163,8 +161,34 @@ final class RecorderModel: ObservableObject {
         stopTimer()
         let url = await recorder.stop()
         isRecording = false
+        setLastFile(url)
+    }
+
+    private func setLastFile(_ url: URL?) {
         if let url, FileManager.default.fileExists(atPath: url.path) {
             lastFileURL = url
+        }
+    }
+
+    // MARK: - Trim editor
+
+    /// Open the Trim editor for the most recent recording (used by the "Trim…" button).
+    func trimLastRecording() {
+        guard let url = lastFileURL, FileManager.default.fileExists(atPath: url.path) else { return }
+        presentTrimEditor(for: url)
+    }
+
+    /// Transcribe the most recent recording with Whisper (tiny).
+    func transcribeLastRecording() {
+        guard let url = lastFileURL, FileManager.default.fileExists(atPath: url.path) else { return }
+        TranscriptPresenter.shared.present(url: url)
+    }
+
+    private func presentTrimEditor(for url: URL) {
+        TrimWindowPresenter.shared.present(url: url) { [weak self] in
+            // The file was replaced in place (same path); nudge the UI to refresh.
+            self?.lastFileURL = nil
+            self?.lastFileURL = url
         }
     }
 
@@ -233,9 +257,7 @@ final class RecorderModel: ObservableObject {
         stopTimer()
         let url = await recorder.stop()
         isRecording = false
-        if let url, FileManager.default.fileExists(atPath: url.path) {
-            lastFileURL = url
-        }
+        setLastFile(url)
         report(error)
     }
 
