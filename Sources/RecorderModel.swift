@@ -184,16 +184,16 @@ final class RecorderModel: ObservableObject {
         presentTrimEditor(for: url)
     }
 
-    /// Transcribe the most recent recording with Whisper (tiny).
+    /// Transcribe the most recent recording with Whisper (progress shown inline).
     func transcribeLastRecording() {
         guard let url = lastFileURL, FileManager.default.fileExists(atPath: url.path) else { return }
-        TranscriptPresenter.shared.present(url: url)
+        TranscriptionManager.shared.transcribe(url)
     }
 
     // Per-file actions (used by the History window).
     func reveal(_ url: URL) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
     func trim(_ url: URL) { presentTrimEditor(for: url) }
-    func transcribe(_ url: URL) { TranscriptPresenter.shared.present(url: url) }
+    func transcribe(_ url: URL) { TranscriptionManager.shared.transcribe(url) }
 
     /// Open the paginated History window listing every recording in the folder.
     func showHistory() {

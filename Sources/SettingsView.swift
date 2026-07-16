@@ -6,6 +6,17 @@ struct SettingsView: View {
     @ObservedObject var model: RecorderModel
     @AppStorage(Appearance.showMenuBarKey) private var showMenuBarIcon = true
     @AppStorage(Appearance.showDockKey) private var showDockIcon = true
+    @AppStorage(Transcriber.modelKey) private var whisperModel = Transcriber.Model.tiny.rawValue
+    @AppStorage(Transcriber.languageKey) private var whisperLanguage = "auto"
+    @AppStorage(Transcriber.translateKey) private var whisperTranslate = false
+
+    /// Common whisper languages for the picker (code, display name).
+    private let languages: [(String, String)] = [
+        ("auto", "Auto-detect"), ("en", "English"), ("es", "Spanish"),
+        ("fr", "French"), ("de", "German"), ("it", "Italian"),
+        ("pt", "Portuguese"), ("nl", "Dutch"), ("ru", "Russian"),
+        ("zh", "Chinese"), ("ja", "Japanese"), ("ko", "Korean"), ("ar", "Arabic")
+    ]
 
     var body: some View {
         Form {
@@ -32,6 +43,29 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Transcription") {
+                Picker("Model", selection: $whisperModel) {
+                    ForEach(Transcriber.Model.allCases) { m in
+                        Text(m.label).tag(m.rawValue)
+                    }
+                }
+                Picker("Language", selection: $whisperLanguage) {
+                    ForEach(languages, id: \.0) { code, name in
+                        Text(name).tag(code)
+                    }
+                }
+                Toggle("Translate to English", isOn: $whisperTranslate)
+                if Transcriber.isAvailable {
+                    Text("Transcripts are saved as .srt in a “Transcripts” sub-folder next to your recordings. Larger models are more accurate but slower and download once on first use.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("whisper-cli isn’t installed. Install it with: brew install whisper-cpp")
+                        .font(.caption).foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             Section("Appearance") {
                 Toggle("Show menu bar icon", isOn: Binding(
                     get: { showMenuBarIcon },
@@ -52,6 +86,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 400)
+        .frame(width: 440, height: 560)
     }
 }

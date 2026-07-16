@@ -181,6 +181,9 @@ final class HistoryPresenter: NSObject, NSWindowDelegate {
 
 struct HistoryView: View {
     @StateObject var model: HistoryModel
+    // Observed so finishing a transcription re-renders the rows (the "transcribed"
+    // badge below reads the file system, so it needs a redraw to pick up the change).
+    @ObservedObject private var transcriptions = TranscriptionManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -219,24 +222,40 @@ struct HistoryView: View {
     }
 
     private func row(_ rec: Recording) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "waveform").foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(rec.name).lineLimit(1).truncationMode(.middle)
-                Text("\(formatDuration(rec.duration)) · \(rec.modified.formatted(date: .abbreviated, time: .shortened)) · \(sizeString(rec.size))")
-                    .font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 10) {
+                Image(systemName: "waveform").foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 5) {
+                        Text(rec.name).lineLimit(1).truncationMode(.middle)
+                        if Transcriber.hasTranscript(for: rec.url) {
+                            Button {
+                                NSWorkspace.shared.open(Transcriber.transcriptURL(for: rec.url))
+                            } label: {
+                                Image(systemName: "captions.bubble.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.green)
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Open transcript (.srt)")
+                        }
+                    }
+                    Text("\(formatDuration(rec.duration)) · \(rec.modified.formatted(date: .abbreviated, time: .shortened)) · \(sizeString(rec.size))")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    model.play(rec)
+                } label: {
+                    Image(systemName: (model.playingURL == rec.url && model.isPlaying) ? "pause.fill" : "play.fill")
+                }
+                .controlSize(.small)
+                .help("Play")
+                Button("Show") { model.recorder?.reveal(rec.url) }.controlSize(.small)
+                Button("Trim…") { model.recorder?.trim(rec.url) }.controlSize(.small)
+                Button("Transcribe") { model.recorder?.transcribe(rec.url) }.controlSize(.small)
             }
-            Spacer()
-            Button {
-                model.play(rec)
-            } label: {
-                Image(systemName: (model.playingURL == rec.url && model.isPlaying) ? "pause.fill" : "play.fill")
-            }
-            .controlSize(.small)
-            .help("Play")
-            Button("Show") { model.recorder?.reveal(rec.url) }.controlSize(.small)
-            Button("Trim…") { model.recorder?.trim(rec.url) }.controlSize(.small)
-            Button("Transcribe") { model.recorder?.transcribe(rec.url) }.controlSize(.small)
+            TranscriptionInlineView(url: rec.url)
         }
         .padding(8)
         .background(Color(nsColor: .textBackgroundColor).opacity(0.4))

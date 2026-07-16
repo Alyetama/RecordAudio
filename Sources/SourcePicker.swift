@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Lets the user choose whether to record all system audio or just one app.
 /// Shared by the main window and the menu-bar panel.
@@ -7,9 +8,17 @@ struct SourcePicker: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: isApp ? "app.dashed" : "speaker.wave.2.fill")
-                .foregroundStyle(.secondary)
-                .frame(width: 16)
+            Group {
+                if let icon = appIcon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } else {
+                    Image(systemName: isApp ? "app.dashed" : "speaker.wave.2.fill")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 16, height: 16)
 
             Picker("Record from", selection: Binding(
                 get: { model.source },
@@ -40,6 +49,14 @@ struct SourcePicker: View {
     private var isApp: Bool {
         if case .app = model.source { return true }
         return false
+    }
+
+    /// Icon of the currently-selected app, if one is chosen and installed.
+    private var appIcon: NSImage? {
+        guard case .app(let bid) = model.source,
+              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid)
+        else { return nil }
+        return NSWorkspace.shared.icon(forFile: url.path)
     }
 
     /// The pickable apps, guaranteeing the currently-selected app is present even

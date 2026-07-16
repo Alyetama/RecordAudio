@@ -31,6 +31,12 @@ struct MainView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            Button { model.openFolder() } label: {
+                Label("Open Recordings Folder", systemImage: "folder")
+                    .frame(maxWidth: .infinity)
+            }
+            .controlSize(.large)
+
             Spacer(minLength: 0)
             bottomBar
         }
@@ -57,17 +63,20 @@ struct MainView: View {
     }
 
     private func lastFileRow(_ url: URL) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-            Text(url.lastPathComponent)
-                .font(.caption).lineLimit(1).truncationMode(.middle)
-            if let d = model.lastDuration {
-                Text(formatDuration(d)).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text(url.lastPathComponent)
+                    .font(.caption).lineLimit(1).truncationMode(.middle)
+                if let d = model.lastDuration {
+                    Text(formatDuration(d)).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Trim…") { model.trimLastRecording() }.controlSize(.small)
+                Button("Transcribe") { model.transcribeLastRecording() }.controlSize(.small)
+                Button("Show") { model.revealLastFile() }.controlSize(.small)
             }
-            Spacer()
-            Button("Trim…") { model.trimLastRecording() }.controlSize(.small)
-            Button("Transcribe") { model.transcribeLastRecording() }.controlSize(.small)
-            Button("Show") { model.revealLastFile() }.controlSize(.small)
+            TranscriptionInlineView(url: url)
         }
         .padding(8)
         .background(Color(nsColor: .controlBackgroundColor))
