@@ -61,6 +61,9 @@ struct MainView: View {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
             Text(url.lastPathComponent)
                 .font(.caption).lineLimit(1).truncationMode(.middle)
+            if let d = model.lastDuration {
+                Text(formatDuration(d)).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+            }
             Spacer()
             Button("Trim…") { model.trimLastRecording() }.controlSize(.small)
             Button("Transcribe") { model.transcribeLastRecording() }.controlSize(.small)
@@ -81,6 +84,9 @@ struct MainView: View {
 
             Spacer()
 
+            Button { model.showHistory() } label: {
+                Label("History", systemImage: "clock.arrow.circlepath")
+            }
             Button { model.openAppSettings() } label: {
                 Label("Settings", systemImage: "gearshape")
             }

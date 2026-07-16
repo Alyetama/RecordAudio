@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import AppKit
 import ScreenCaptureKit
+import AVFoundation
 
 /// Audio quality presets. Lower bitrate = smaller file. AAC-LC at 128 kbps is a
 /// good "small but not bad" default (~1 MB per minute, stereo).
@@ -37,6 +38,7 @@ final class RecorderModel: ObservableObject {
     @Published var isRecording = false
     @Published var elapsed: TimeInterval = 0
     @Published var lastFileURL: URL?
+    @Published var lastDuration: Double?
     @Published var statusMessage: String?
     @Published var permissionNeeded = false
 
@@ -165,8 +167,12 @@ final class RecorderModel: ObservableObject {
     }
 
     private func setLastFile(_ url: URL?) {
-        if let url, FileManager.default.fileExists(atPath: url.path) {
-            lastFileURL = url
+        lastDuration = nil
+        guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
+        lastFileURL = url
+        Task {
+            let seconds = (try? await AVURLAsset(url: url).load(.duration))?.seconds
+            if lastFileURL == url { lastDuration = seconds }
         }
     }
 
@@ -182,6 +188,16 @@ final class RecorderModel: ObservableObject {
     func transcribeLastRecording() {
         guard let url = lastFileURL, FileManager.default.fileExists(atPath: url.path) else { return }
         TranscriptPresenter.shared.present(url: url)
+    }
+
+    // Per-file actions (used by the History window).
+    func reveal(_ url: URL) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+    func trim(_ url: URL) { presentTrimEditor(for: url) }
+    func transcribe(_ url: URL) { TranscriptPresenter.shared.present(url: url) }
+
+    /// Open the paginated History window listing every recording in the folder.
+    func showHistory() {
+        HistoryPresenter.shared.present(folder: folderURL, recorder: self)
     }
 
     private func presentTrimEditor(for url: URL) {

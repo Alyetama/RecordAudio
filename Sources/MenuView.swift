@@ -40,6 +40,14 @@ struct MenuView: View {
                 }
                 Spacer()
                 Button {
+                    let popover = NSApp.keyWindow     // the menu-bar panel
+                    model.showHistory()
+                    popover?.close()                  // dismiss back to the menu bar
+                } label: {
+                    Label("History", systemImage: "clock.arrow.circlepath")
+                }
+                Spacer()
+                Button {
                     model.openAppSettings()
                 } label: {
                     Label("Settings…", systemImage: "gearshape")
@@ -66,6 +74,9 @@ struct MenuView: View {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
             Text(url.lastPathComponent)
                 .font(.caption).lineLimit(1).truncationMode(.middle)
+            if let d = model.lastDuration {
+                Text(formatDuration(d)).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+            }
             Spacer()
             Button("Trim…") { model.trimLastRecording() }.controlSize(.small)
             Button("Transcribe") { model.transcribeLastRecording() }.controlSize(.small)
