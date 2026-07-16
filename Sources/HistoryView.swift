@@ -19,6 +19,12 @@ func formatDuration(_ seconds: Double) -> String {
     return String(format: "%d:%02d", total / 60, total % 60)
 }
 
+/// Like formatDuration but always shows a clock (0:00), for the transport.
+func formatClock(_ seconds: Double) -> String {
+    let total = max(0, Int(seconds.rounded()))
+    return String(format: "%d:%02d", total / 60, total % 60)
+}
+
 @MainActor
 final class HistoryModel: ObservableObject {
     let folder: URL
@@ -26,6 +32,14 @@ final class HistoryModel: ObservableObject {
 
     @Published var recordings: [Recording] = []
     @Published var page = 0
+
+    // In-app playback of the selected recording.
+    @Published var playingURL: URL?
+    @Published var isPlaying = false
+    @Published var playhead: Double = 0
+    @Published var playDuration: Double = 0
+    private var player: AVAudioPlayer?
+    private var timer: Timer?
 
     let pageSize = 8
 
@@ -63,6 +77,75 @@ final class HistoryModel: ObservableObject {
             recs[i].duration = (try? await AVURLAsset(url: recs[i].url).load(.duration))?.seconds ?? 0
         }
         recordings = recs
+    }
+
+    // MARK: - Playback
+
+    /// Play a row (or toggle it if it's already the loaded one).
+    func play(_ rec: Recording) {
+        if playingURL == rec.url {
+            togglePlay()
+            return
+        }
+        stopTimer()
+        player?.stop()
+        guard let p = try? AVAudioPlayer(contentsOf: rec.url) else { return }
+        player = p
+        p.prepareToPlay()
+        playingURL = rec.url
+        playDuration = p.duration
+        playhead = 0
+        p.play()
+        isPlaying = true
+        startTimer()
+    }
+
+    func togglePlay() {
+        guard let p = player else { return }
+        if p.isPlaying {
+            p.pause(); isPlaying = false; stopTimer()
+        } else {
+            if playhead >= playDuration - 0.03 { playhead = 0; p.currentTime = 0 }
+            p.play(); isPlaying = true; startTimer()
+        }
+    }
+
+    func seek(to time: Double) {
+        guard let p = player else { return }
+        let t = min(max(0, time), playDuration)
+        p.currentTime = t
+        playhead = t
+    }
+
+    func stopPlayback() {
+        player?.stop(); player = nil
+        stopTimer()
+        isPlaying = false
+        playingURL = nil
+        playhead = 0
+        playDuration = 0
+    }
+
+    private func startTimer() {
+        stopTimer()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.tick() }
+        }
+    }
+
+    private func tick() {
+        guard let p = player else { return }
+        if p.isPlaying {
+            playhead = p.currentTime
+        } else {
+            isPlaying = false
+            stopTimer()
+            if playhead >= playDuration - 0.1 { playhead = playDuration }
+        }
+    }
+
+    private func stopTimer() {
+        timer?.invalidate(); timer = nil
     }
 }
 
@@ -124,10 +207,15 @@ struct HistoryView: View {
                 }
                 pager
             }
+
+            if model.playingURL != nil {
+                transport
+            }
         }
         .padding(16)
         .frame(minWidth: 520, minHeight: 420)
         .onAppear { Task { await model.load() } }
+        .onDisappear { model.stopPlayback() }
     }
 
     private func row(_ rec: Recording) -> some View {
@@ -139,6 +227,13 @@ struct HistoryView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
+            Button {
+                model.play(rec)
+            } label: {
+                Image(systemName: (model.playingURL == rec.url && model.isPlaying) ? "pause.fill" : "play.fill")
+            }
+            .controlSize(.small)
+            .help("Play")
             Button("Show") { model.recorder?.reveal(rec.url) }.controlSize(.small)
             Button("Trim…") { model.recorder?.trim(rec.url) }.controlSize(.small)
             Button("Transcribe") { model.recorder?.transcribe(rec.url) }.controlSize(.small)
@@ -146,6 +241,36 @@ struct HistoryView: View {
         .padding(8)
         .background(Color(nsColor: .textBackgroundColor).opacity(0.4))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var transport: some View {
+        VStack(spacing: 4) {
+            Divider()
+            HStack(spacing: 10) {
+                Button { model.togglePlay() } label: {
+                    Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                }
+                .buttonStyle(.borderless)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.playingURL?.lastPathComponent ?? "")
+                        .font(.caption).lineLimit(1).truncationMode(.middle)
+                    HStack(spacing: 6) {
+                        Text(formatClock(model.playhead)).font(.caption2).monospacedDigit().foregroundStyle(.secondary)
+                        Slider(value: Binding(get: { model.playhead },
+                                              set: { model.seek(to: $0) }),
+                               in: 0...max(model.playDuration, 0.01))
+                        Text(formatClock(model.playDuration)).font(.caption2).monospacedDigit().foregroundStyle(.secondary)
+                    }
+                }
+
+                Button { model.stopPlayback() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .help("Close player")
+            }
+        }
     }
 
     private var pager: some View {
